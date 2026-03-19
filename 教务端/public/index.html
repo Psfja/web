@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加立敦大学教务系统</title>
+    <!-- 引入 Chart.js 图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- 背景流动的全局光标效果 -->
+    <div class="cursor-glow" id="cursor-glow"></div>
+
+    <div class="container">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="ri-blaze-line"></i>
+                <h2 id="nav-system-name">加立敦大学</h2>
+            </div>
+            <nav>
+                <ul>
+                    <li class="nav-item active" onclick="switchView('dashboard')">
+                        <a href="#"><i class="ri-dashboard-line"></i> 仪表盘</a>
+                    </li>
+                    <li class="nav-item" onclick="switchView('courses')">
+                        <a href="#"><i class="ri-book-open-line"></i> 课程管理</a>
+                    </li>
+                    <li class="nav-item" onclick="switchView('students')">
+                        <a href="#"><i class="ri-user-smile-line"></i> 学生学习</a>
+                    </li>
+                    <li class="nav-item" onclick="switchView('schedule')">
+                        <a href="#"><i class="ri-calendar-line"></i> 排课系统</a>
+                    </li>
+                    <li class="nav-item" onclick="switchView('resources')">
+                        <a href="#"><i class="ri-folder-upload-line"></i> 课程资源</a>
+                    </li>
+                    <li class="nav-item" onclick="switchView('announcements')">
+                        <a href="#"><i class="ri-notification-3-line"></i> 公告发布</a>
+                    </li>
+                    <li class="nav-item" onclick="switchView('settings')">
+                        <a href="#"><i class="ri-settings-4-line"></i> 系统设置</a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="user-profile">
+                <div class="avatar">AD</div>
+                <div class="user-info">
+                    <h4>Admin User</h4>
+                    <p>超级管理员</p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="main-content">
+            <!-- 1. 仪表盘视图 -->
+            <section id="view-dashboard" class="view-section active">
+                <header>
+                    <h1>仪表盘</h1>
+                    <span class="semester-badge" id="dash-semester">...</span>
+                </header>
+                <div class="stats-grid">
+                    <div class="spotlight-card stat-card">
+                        <div class="icon-box"><i class="ri-book-2-fill"></i></div>
+                        <div class="stat-info"><h3>总课程</h3><p id="stat-courses">0</p></div>
+                    </div>
+                    <div class="spotlight-card stat-card">
+                        <div class="icon-box"><i class="ri-group-fill"></i></div>
+                        <div class="stat-info"><h3>在校学生</h3><p id="stat-students">0</p></div>
+                    </div>
+                    <div class="spotlight-card stat-card">
+                        <div class="icon-box"><i class="ri-time-line"></i></div>
+                        <div class="stat-info"><h3>今日课程</h3><p>8</p></div>
+                    </div>
+                </div>
+
+                <!-- 新增：数据可视化区域 -->
+                <div class="charts-row">
+                    <div class="spotlight-card chart-container">
+                        <h3><i class="ri-bar-chart-fill"></i> 选课热度分布</h3>
+                        <canvas id="enrollmentChart"></canvas>
+                    </div>
+                    <div class="spotlight-card notification-panel">
+                        <h3><i class="ri-notification-badge-line"></i> 最新动态</h3>
+                        <ul id="recent-activities">
+                            <!-- JS 动态填充 -->
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. 课程管理视图 -->
+            <section id="view-courses" class="view-section" style="display:none;">
+                <header>
+                    <h1>课程管理</h1>
+                    <button class="btn-primary" onclick="openModal('courseModal')"><i class="ri-add-line"></i> 新增课程</button>
+                </header>
+                <div class="spotlight-card table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>代码</th><th>名称</th><th>教师</th><th>学分</th><th>地点</th><th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="course-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 3. 学生学习视图 -->
+            <section id="view-students" class="view-section" style="display:none;">
+                <header>
+                    <h1>学生信息</h1>
+                    <button class="btn-primary" onclick="openModal('studentModal')"><i class="ri-add-line"></i> 新增学生</button>
+                </header>
+                <div class="spotlight-card table-container">
+                    <table>
+                        <thead>
+                            <tr><th>学号</th><th>姓名</th><th>专业</th><th>邮箱</th><th>状态</th><th>操作</th></tr>
+                        </thead>
+                        <tbody id="student-table-body"></tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 4. 排课系统视图 -->
+            <section id="view-schedule" class="view-section" style="display:none;">
+                <header>
+                    <h1>排课管理</h1>
+                </header>
+                <!-- 只需要保留这个容器 div 即可，类名会由 JS 自动添加 -->
+                <div id="schedule-container"></div>
+            </section>
+
+            <!-- 5. 公告发布视图 -->
+            <section id="view-announcements" class="view-section" style="display:none;">
+                <header>
+                    <h1>校园公告板</h1>
+                </header>
+                <div class="announcement-layout">
+                    <!-- 左侧发布表单 -->
+                    <div class="spotlight-card form-card">
+                        <h3>发布新通知</h3>
+                        <form onsubmit="postAnnouncement(event)">
+                            <div class="form-group">
+                                <label>标题</label>
+                                <input type="text" id="ann-title" required placeholder="请输入标题...">
+                            </div>
+                            <div class="form-group">
+                                <label>优先级</label>
+                                <select id="ann-priority">
+                                    <option value="normal">普通消息</option>
+                                    <option value="high">紧急通知</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>内容</label>
+                                <textarea id="ann-content" rows="5" required placeholder="请输入通知详情..."></textarea>
+                            </div>
+                            <button type="submit" class="btn-primary" style="width:100%">立即发布</button>
+                        </form>
+                    </div>
+                    <!-- 右侧历史列表 -->
+                    <div class="spotlight-card list-card">
+                        <h3>历史公告</h3>
+                        <div id="announcement-list" class="msg-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 6. 设置视图 -->
+            <section id="view-settings" class="view-section" style="display:none;">
+                <header><h1>系统设置</h1></header>
+                <div class="spotlight-card setting-card">
+                    <form id="settings-form" onsubmit="saveSettings(event)">
+                        <div class="form-group">
+                            <label>系统名称</label>
+                            <input type="text" id="set-sys-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>当前学期</label>
+                            <input type="text" id="set-semester" required>
+                        </div>
+                        <button type="submit" class="btn-primary">保存设置</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- 7. 资源管理视图 -->
+            <section id="view-resources" class="view-section" style="display:none;">
+                <header><h1>课程资源中心</h1></header>
+                
+                <div class="resource-layout">
+                    <!-- 左侧：课程列表 -->
+                    <div class="spotlight-card course-list-panel">
+                        <h3>选择课程</h3>
+                        <div id="resource-course-list" class="scrolly-list"></div>
+                    </div>
+
+                    <div class="spotlight-card file-manager-panel">
+                        <h3 id="current-course-title">请选择左侧课程</h3>
+                        
+                        <!-- 拖拽上传区 -->
+                        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+                            <input type="file" id="file-input" hidden onchange="handleFileUpload(this)">
+                            <div class="zone-content">
+                                <i class="ri-cloud-upload-line"></i>
+                                <p>点击或拖拽文件至此上传</p>
+                                <span>支持 PDF, DOC, PPT, ZIP (Max 10MB)</span>
+                            </div>
+                        </div>
+
+                        <!-- 文件列表 -->
+                        <div class="file-grid" id="file-grid">
+                            <!-- JS 动态填充 -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- 模态框：新增/编辑课程 -->
+    <div id="courseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>课程信息</h2>
+                <span class="close" onclick="closeModal('courseModal')">&times;</span>
+            </div>
+            <form id="courseForm" onsubmit="handleCourseSubmit(event)">
+                <input type="hidden" id="courseId"> <!-- 用于区分是新增还是编辑 -->
+                <div class="form-group">
+                    <label>课程代码</label>
+                    <input type="text" id="c_code" required placeholder="如 CS101">
+                </div>
+                <div class="form-group">
+                    <label>课程名称</label>
+                    <input type="text" id="c_name" required>
+                </div>
+                <div class="form-group">
+                    <label>授课教师</label>
+                    <input type="text" id="c_teacher" required>
+                </div>
+                <div class="form-group">
+                    <label>学分</label>
+                    <input type="number" id="c_credits" value="3">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModal('courseModal')">取消</button>
+                    <button type="submit" class="btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 模态框：新增/编辑学生 -->
+    <div id="studentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>学生信息</h2>
+                <span class="close" onclick="closeModal('studentModal')">&times;</span>
+            </div>
+            <form id="studentForm" onsubmit="handleStudentSubmit(event)">
+                <input type="hidden" id="studentId"> <!-- 用于区分是新增还是编辑 -->
+                <div class="form-group">
+                    <label>学号</label>
+                    <input type="text" id="s_id" required placeholder="如 S2023001">
+                </div>
+                <div class="form-group">
+                    <label>姓名</label>
+                    <input type="text" id="s_name" required>
+                </div>
+                <div class="form-group">
+                    <label>专业</label>
+                    <input type="text" id="s_major" required>
+                </div>
+                <div class="form-group">
+                    <label>邮箱</label>
+                    <input type="email" id="s_email" required>
+                </div>
+                <div class="form-group">
+                    <label>状态</label>
+                    <select id="s_status" required>
+                        <option value="active">在读</option>
+                        <option value="graduated">已毕业</option>
+                    </select>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" onclick="closeModal('studentModal')">取消</button>
+                    <button type="submit" class="btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 成绩录入模态框 (新增) -->
+    <div id="gradingModal" class="modal">
+        <div class="modal-content" style="width: 600px;">
+            <div class="modal-header">
+                <h2>成绩录入 - <span id="grade-course-name"></span></h2>
+                <span class="close" onclick="closeModal('gradingModal')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <table class="grading-table">
+                    <thead><tr><th>学号</th><th>姓名</th><th>成绩</th><th>评语</th><th>操作</th></tr></thead>
+                    <tbody id="grading-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

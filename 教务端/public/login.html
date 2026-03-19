@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>加立敦大学 - 统一身份认证</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* 引入全局样式 */
+        @import url('style.css');
+
+        .login-wrapper {
+            display: flex;
+            height: 100vh;
+            align-items: center;
+            justify-content: center;
+            perspective: 1000px; /* 为3D效果准备视距 */
+        }
+
+        /* 核心鼠标交互 3: 3D 视差登录卡片 */
+        .login-card {
+            width: 440px;
+            padding: 40px;
+            background: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.1), inset 0 1px 0 rgba(0,0,0,0.1);
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out; /* 快速响应鼠标 */
+        }
+
+        /* 内部元素产生视差高度 */
+        .login-header { transform: translateZ(40px); text-align: center; margin-bottom: 30px;}
+        .login-form { transform: translateZ(20px); }
+
+        .form-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(255,255,255,0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-family: 'JetBrains Mono', monospace;
+            outline: none;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus {
+            border-color: var(--tech-primary);
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.2);
+            background: rgba(255,255,255,1);
+        }
+
+        /* 核心鼠标交互 4: 磁性按钮 (Magnetic Button) */
+        .magnetic-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--tech-primary), var(--tech-secondary));
+            color: white;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);
+            transform: translate(0px, 0px); /* JS 控制偏移 */
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-bottom: 20px;
+        }
+
+        .form-options {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+
+        .remember-me {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .remember-me input[type="checkbox"] {
+            accent-color: var(--tech-primary);
+            width: 16px;
+            height: 16px;
+        }
+
+        .forgot-password {
+            color: var(--tech-primary);
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+
+        .forgot-password:hover {
+            color: var(--tech-secondary);
+            text-decoration: underline;
+        }
+
+        .form-switch {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .form-switch a {
+            color: var(--tech-primary);
+            text-decoration: none;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .form-switch a:hover {
+            color: var(--tech-secondary);
+            text-decoration: underline;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        .login-header h2 {
+            margin: 10px 0 0 0;
+            letter-spacing: 2px;
+            color: var(--text-main);
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        .login-header i {
+            font-size: 48px;
+            color: var(--tech-primary);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 16px;
+            top: 44px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .toggle-password:hover {
+            color: var(--tech-primary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-wrapper">
+    <div class="login-card" id="tilt-card">
+        <div class="login-header">
+            <i class="ri-blaze-line"></i>
+            <h2>加立敦大学</h2>
+            <p>统一身份认证系统</p>
+        </div>
+        
+        <!-- 登录表单 -->
+        <form id="loginForm" class="auth-form active">
+            <div class="form-group">
+                <label for="login-student-id">学号</label>
+                <input type="text" class="form-input" id="login-student-id" name="studentId" placeholder="请输入学号" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">密码</label>
+                <input type="password" class="form-input" id="login-password" name="password" placeholder="请输入密码" required>
+                <button type="button" class="toggle-password" onclick="togglePassword('login-password')">
+                    <i class="ri-eye-line"></i>
+                </button>
+            </div>
+            <div class="form-options">
+                <label class="remember-me">
+                    <input type="checkbox">
+                    <span>记住我</span>
+                </label>
+                <a href="#" class="forgot-password">忘记密码？</a>
+            </div>
+            <button type="submit" class="magnetic-btn" id="login-btn">登录 L O G I N</button>
+            <div class="form-switch">
+                <p>还没有账号？<a href="#" onclick="switchForm('register')">立即注册</a></p>
+            </div>
+        </form>
+
+        <!-- 注册表单 -->
+        <form id="registerForm" class="auth-form">
+            <div class="form-group">
+                <label for="reg-student-id">学号</label>
+                <input type="text" class="form-input" id="reg-student-id" name="studentId" placeholder="请输入学号" required>
+            </div>
+            <div class="form-group">
+                <label for="reg-name">姓名</label>
+                <input type="text" class="form-input" id="reg-name" name="name" placeholder="请输入姓名" required>
+            </div>
+            <div class="form-group">
+                <label for="reg-major">专业</label>
+                <input type="text" class="form-input" id="reg-major" name="major" placeholder="请输入专业" required>
+            </div>
+            <div class="form-group">
+                <label for="reg-email">邮箱</label>
+                <input type="email" class="form-input" id="reg-email" name="email" placeholder="请输入邮箱" required>
+            </div>
+            <div class="form-group">
+                <label for="reg-password">密码</label>
+                <input type="password" class="form-input" id="reg-password" name="password" placeholder="请输入密码" required minlength="6">
+                <button type="button" class="toggle-password" onclick="togglePassword('reg-password')">
+                    <i class="ri-eye-line"></i>
+                </button>
+            </div>
+            <div class="form-group">
+                <label for="reg-confirm-password">确认密码</label>
+                <input type="password" class="form-input" id="reg-confirm-password" name="confirmPassword" placeholder="请确认密码" required minlength="6">
+                <button type="button" class="toggle-password" onclick="togglePassword('reg-confirm-password')">
+                    <i class="ri-eye-line"></i>
+                </button>
+            </div>
+            <button type="submit" class="magnetic-btn" id="register-btn">注册 R E G I S T E R</button>
+            <div class="form-switch">
+                <p>已有账号？<a href="#" onclick="switchForm('login')">立即登录</a></p>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // --- 3D 视差倾斜交互 ---
+    const card = document.getElementById('tilt-card');
+    document.addEventListener('mousemove', (e) => {
+        let xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+        let yAxis = (window.innerHeight / 2 - e.pageY) / 25;
+        card.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+    });
+    
+    // 鼠标离开恢复原状
+    document.addEventListener('mouseleave', () => {
+        card.style.transform = `rotateY(0deg) rotateX(0deg)`;
+        card.style.transition = `transform 0.5s ease`;
+    });
+    card.addEventListener('mouseenter', () => {
+        card.style.transition = `none`; // 移入时取消动画，让跟随更丝滑
+    });
+
+    // --- 磁性按钮交互 ---
+    const btns = document.querySelectorAll('.magnetic-btn');
+    btns.forEach(btn => {
+        btn.addEventListener('mousemove', (e) => {
+            const rect = btn.getBoundingClientRect();
+            const x = e.clientX - rect.left - rect.width / 2;
+            const y = e.clientY - rect.top - rect.height / 2;
+            // 按钮中心向鼠标靠近
+            btn.style.transform = `translate(${x * 0.3}px, ${y * 0.3}px)`;
+        });
+        btn.addEventListener('mouseleave', () => {
+            // 离开时如果冻般弹回
+            btn.style.transform = 'translate(0px, 0px)';
+        });
+    });
+
+    // --- 表单切换 ---
+    function switchForm(formType) {
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        
+        if (formType === 'register') {
+            loginForm.classList.remove('active');
+            registerForm.classList.add('active');
+        } else {
+            registerForm.classList.remove('active');
+            loginForm.classList.add('active');
+        }
+    }
+
+    // --- 密码显示/隐藏 ---
+    function togglePassword(inputId) {
+        const input = document.getElementById(inputId);
+        const icon = input.parentElement.querySelector('.toggle-password i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'ri-eye-off-line';
+        } else {
+            input.type = 'password';
+            icon.className = 'ri-eye-line';
+        }
+    }
+
+    // --- 登录/注册处理 ---
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        // 登录逻辑
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        // 注册逻辑
+    });
+</script>
+</body>
+</html>

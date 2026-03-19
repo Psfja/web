@@ -1,0 +1,370 @@
+你的注册功能目前无法运行，主要原因是因为**后端（server.js）还没有处理注册和登录的接口**，且**数据库（MySQL）中原来的学生表没有“密码”这一列**。
+
+为了修复这个问题并完善整个登录注册流程，我们需要执行以下三个步骤：
+
+### 第 1 步：更新数据库结构
+
+我们需要给 `students` 表增加一个 `password` 字段。请在 MySQL 中运行以下 SQL 语句：
+
+**SQL 命令：**
+
+```sql
+USE university_system;
+
+-- 1. 给学生表增加密码字段
+ALTER TABLE students ADD COLUMN password VARCHAR(255) NOT NULL DEFAULT '123456';
+
+-- 2. (可选) 清空之前的测试数据，以免没有密码导致报错
+-- TRUNCATE TABLE students; 
+-- TRUNCATE TABLE enrollments;
+```
+
+---
+
+### 第 2 步：更新后端 `server.js`
+
+我们需要在 `server.js` 中添加处理 **注册** 和 **登录** 的 API。请将以下代码添加到 `server.js` 的 `// ... (app.listen 部分)` 之前：
+
+**文件名：`server.js` (追加内容)**
+
+```javascript
+// ================= 认证系统 API (新增) =================
+
+// 1. 学生注册
+app.post('/api/student/register', (req, res) => {
+    // 注意：前端传来的 FormData 字段名与数据库字段名的对应
+    const { studentId, name, major, email, password } = req.body;
+
+    // 简单的后端校验
+    if (!studentId || !password || !name) {
+        return res.status(400).json({ message: '请填写完整信息' });
+    }
+
+    // 检查学号是否已存在
+    db.query('SELECT * FROM students WHERE student_id = ?', [studentId], (err, results) => {
+        if (err) return res.status(500).json({ message: '服务器错误' });
+        if (results.length > 0) {
+            return res.status(400).json({ message: '该学号已被注册' });
+        }
+
+        // 插入新用户
+        const sql = 'INSERT INTO students (student_id, name, major, email, password) VALUES (?, ?, ?, ?, ?)';
+        db.query(sql, [studentId, name, major, email, password], (err, result) => {
+            if (err) {
+                console.error(err);
+                return res.status(500).json({ message: '注册失败，请稍后重试' });
+            }
+            res.json({ message: '注册成功' });
+        });
+    });
+});
+
+// 2. 学生登录
+app.post('/api/student/login', (req, res) => {
+    const { studentId, password } = req.body;
+
+    const sql = 'SELECT * FROM students WHERE student_id = ? AND password = ?';
+    db.query(sql, [studentId, password], (err, results) => {
+        if (err) return res.status(500).json({ message: '服务器错误' });
+        
+        if (results.length === 0) {
+            return res.status(401).json({ message: '学号或密码错误' });
+        }
+
+        const student = results[0];
+        
+        // 登录成功，返回模拟 Token 和用户信息
+        // 注意：实际生产环境中应该使用 JWT (JSON Web Token)
+        const token = 'mock-token-' + student.id + '-' + Date.now();
+        
+        res.json({
+            message: '登录成功',
+            token: token,
+            student: {
+                id: student.id,
+                student_id: student.student_id,
+                name: student.name,
+                major: student.major
+            }
+        });
+    });
+});
+```
+
+---
+
+### 第 3 步：设计登录页面 `public/login.html`
+
+既然你要高级 UI，我们设计一个**玻璃拟态 + 动态背景**的登录页，完美适配你提供的 JS 代码。
+
+**文件名：`public/login.html`**
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina | 学生登录</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #0f172a;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 动态背景 */
+        .bg-glow {
+            position: absolute;
+            width: 600px; height: 600px;
+            background: radial-gradient(circle, rgba(79, 70, 229, 0.3) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            top: -100px; left: -100px;
+            animation: float 10s infinite ease-in-out;
+            z-index: 0;
+        }
+        .bg-glow:nth-child(2) {
+            top: auto; bottom: -100px; left: auto; right: -100px;
+            background: radial-gradient(circle, rgba(236, 72, 153, 0.3) 0%, rgba(0,0,0,0) 70%);
+            animation: float 15s infinite ease-in-out reverse;
+        }
+
+        @keyframes float { 0% { transform: translate(0, 0); } 50% { transform: translate(50px, 50px); } 100% { transform: translate(0, 0); } }
+
+        /* 玻璃容器 */
+        .auth-container {
+            width: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            padding: 40px;
+            z-index: 1;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .logo {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+        .logo i { font-size: 40px; color: #818cf8; }
+        .logo h1 { font-size: 24px; font-weight: 600; margin-top: 10px; }
+
+        /* 表单切换动画 */
+        .form-wrapper { display: none; opacity: 0; transition: opacity 0.3s ease; }
+        .form-wrapper.active { display: block; opacity: 1; animation: fadeIn 0.5s forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .form-group { margin-bottom: 20px; position: relative; }
+        .form-group label { display: block; color: #94a3b8; font-size: 13px; margin-bottom: 8px; }
+        
+        .input-box { position: relative; }
+        .input-box i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #64748b; }
+        
+        input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 12px 12px 40px;
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s;
+            outline: none;
+        }
+        input:focus { border-color: #818cf8; box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.2); background: rgba(15, 23, 42, 0.8); }
+
+        /* 密码显示开关 */
+        .toggle-password {
+            position: absolute;
+            right: 14px; top: 50%; transform: translateY(-50%);
+            cursor: pointer; color: #64748b;
+        }
+        .toggle-password:hover { color: #94a3b8; }
+
+        .auth-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+        .auth-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+        .auth-btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        .auth-btn.loading { position: relative; color: transparent; }
+        .auth-btn.loading::after {
+            content: ""; position: absolute; left: 50%; top: 50%; width: 20px; height: 20px;
+            border: 2px solid white; border-top-color: transparent; border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin-left: -10px; margin-top: -10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .switch-text { text-align: center; margin-top: 20px; color: #94a3b8; font-size: 14px; }
+        .switch-text a { color: #818cf8; text-decoration: none; font-weight: 500; cursor: pointer; }
+        .switch-text a:hover { text-decoration: underline; }
+
+        /* 消息提示 */
+        .error-message, .success-message {
+            padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .error-message { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .success-message { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); }
+    </style>
+</head>
+<body>
+    <div class="bg-glow"></div>
+    <div class="bg-glow"></div>
+
+    <div class="auth-container">
+        <div class="logo">
+            <i class="ri-graduation-cap-fill"></i>
+            <h1>Lumina Portal</h1>
+        </div>
+
+        <!-- 登录表单 -->
+        <form id="loginForm" class="form-wrapper active">
+            <div class="form-group">
+                <label>学号</label>
+                <div class="input-box">
+                    <i class="ri-user-line"></i>
+                    <input type="text" name="studentId" id="login-student-id" placeholder="请输入学号" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <div class="input-box">
+                    <i class="ri-lock-line"></i>
+                    <input type="password" name="password" id="login-password" placeholder="请输入密码" required>
+                    <span class="toggle-password" onclick="togglePassword('login-password')">
+                        <i class="ri-eye-line"></i>
+                    </span>
+                </div>
+            </div>
+            <div style="text-align: right; margin-bottom: 20px;">
+                <a href="#" class="forgot-password" style="color: #64748b; font-size: 12px; text-decoration: none;">忘记密码？</a>
+            </div>
+            <button type="submit" class="auth-btn">立即登录</button>
+            <div class="switch-text">
+                还没有账号？ <a onclick="switchForm('register')">去注册</a>
+            </div>
+        </form>
+
+        <!-- 注册表单 -->
+        <form id="registerForm" class="form-wrapper">
+            <div class="form-group">
+                <label>学号</label>
+                <div class="input-box">
+                    <i class="ri-id-card-line"></i>
+                    <input type="text" name="studentId" id="reg-student-id" placeholder="例如: S2023001" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>姓名</label>
+                <div class="input-box">
+                    <i class="ri-user-smile-line"></i>
+                    <input type="text" name="name" placeholder="真实姓名" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>专业</label>
+                <div class="input-box">
+                    <i class="ri-book-mark-line"></i>
+                    <input type="text" name="major" placeholder="例如: 计算机科学" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>邮箱</label>
+                <div class="input-box">
+                    <i class="ri-mail-line"></i>
+                    <input type="email" name="email" placeholder="example@edu.com" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>密码</label>
+                <div class="input-box">
+                    <i class="ri-lock-line"></i>
+                    <input type="password" name="password" id="reg-password" placeholder="至少6位" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>确认密码</label>
+                <div class="input-box">
+                    <i class="ri-lock-check-line"></i>
+                    <input type="password" name="confirmPassword" id="reg-confirm-password" placeholder="再次输入密码" required>
+                </div>
+            </div>
+            <button type="submit" class="auth-btn">注册账户</button>
+            <div class="switch-text">
+                已有账号？ <a onclick="switchForm('login')">去登录</a>
+            </div>
+        </form>
+    </div>
+
+    <script src="login-script.js"></script>
+</body>
+</html>
+```
+
+### 第 4 步：更新 `student.html` 以进行身份验证
+
+为了让登录有意义，我们需要在学生主页 `student.html` 中添加一个检查，如果用户没登录，就踢回登录页。
+
+**文件名：`public/student-script.js` (在文件最顶部添加)**
+
+```javascript
+// === 身份验证逻辑 ===
+const token = localStorage.getItem('studentToken');
+const studentInfo = JSON.parse(localStorage.getItem('studentInfo') || '{}');
+
+if (!token) {
+    // 未登录，强制跳转
+    window.location.href = '/login.html';
+}
+
+// 退出登录功能
+function logout() {
+    localStorage.removeItem('studentToken');
+    localStorage.removeItem('studentInfo');
+    window.location.href = '/login.html';
+}
+
+// 在页面加载后更新用户信息
+document.addEventListener('DOMContentLoaded', () => {
+    // 更新侧边栏名字
+    const nameEl = document.getElementById('nav-name');
+    if (nameEl && studentInfo.name) {
+        nameEl.innerText = studentInfo.name.toUpperCase();
+    }
+    
+    // ... 原有的 updateClock 等代码 ...
+});
+```
+
+### 如何测试
+
+1.  **重启服务**：`node server.js`
+2.  **访问**：`http://localhost:3000/login.html`
+3.  **注册**：点击“去注册”，输入 `S2024001`，姓名 `王小明`，密码 `123456` 等信息。
+4.  **结果**：你应该能看到绿色的“注册成功”提示，然后自动跳回登录页。
+5.  **登录**：使用刚才的账号密码登录，成功后会自动跳转到科技风的 `student.html` 页面。
+
+你的 JS 代码逻辑本身写得很好，主要问题是之前我们没有配置后端接口和数据库字段。加上上面这几步后，一切就会完美运行了！

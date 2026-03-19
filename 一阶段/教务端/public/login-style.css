@@ -1,0 +1,444 @@
+:root {
+    --bg-dark: #09090b;
+    --bg-card: rgba(24, 24, 27, 0.6);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --primary: #0ea5e9; /* 电光蓝 */
+    --accent: #8b5cf6;  /* 赛博紫 */
+    --text-main: #e2e8f0;
+    --text-muted: #94a3b8;
+    --neon-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 背景特效 */
+.ambient-light {
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.05), transparent 40%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.scan-line {
+    position: absolute;
+    top: 0;left: 0;
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(
+        transparent,
+        transparent 2px,
+        rgba(14, 165, 233, 0.1) 2px,
+        rgba(14, 165, 233, 0.1) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+    animation: scan 5s linear infinite;
+}
+
+@keyframes scan {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(100%); }
+}
+
+/* 登录容器 */
+.login-container {
+    display: flex;
+    height: 100vh;
+    position: relative;
+    z-index: 2;
+}
+
+/* 登录面板 */
+.login-panel {
+    width: 500px;
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid var(--border-color);
+    padding: 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* 品牌标识 */
+.brand {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 42px;
+    font-weight: 700;
+    color: var(--primary);
+    text-shadow: var(--neon-shadow);
+    margin-bottom: 50px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* 认证表单 */
+.auth-form {
+    display: none;
+    opacity: 0;
+    transition: all 0.5s ease;
+}
+
+.auth-form.active {
+    display: block;
+    opacity: 1;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.auth-form h2 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 28px;
+    text-align: center;
+    margin-bottom: 40px;
+    color: var(--primary);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+/* 表单组 */
+.form-group {
+    margin-bottom: 25px;
+    position: relative;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.form-group input {
+    width: 100%;
+    background: rgba(24, 24, 27, 0.6);
+    border: 1px solid var(--border-color);
+    padding: 14px 16px 14px 45px;
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: var(--neon-shadow);
+    background: rgba(14, 165, 233, 0.05);
+}
+
+.form-group i {
+    position: absolute;
+    left: 16px;
+    top: 44px;
+    color: var(--text-muted);
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.form-group input:focus + i {
+    color: var(--primary);
+}
+
+/* 密码切换按钮 */
+.toggle-password {
+    position: absolute;
+    right: 16px;
+    top: 44px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.toggle-password:hover {
+    color: var(--primary);
+}
+
+/* 表单选项 */
+.form-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    font-size: 12px;
+}
+
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.remember-me input[type="checkbox"] {
+    accent-color: var(--primary);
+    width: 16px;
+    height: 16px;
+}
+
+.forgot-password {
+    color: var(--primary);
+    text-decoration: none;
+    transition: all 0.3s;
+}
+
+.forgot-password:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+/* 认证按钮 */
+.auth-btn {
+    width: 100%;
+    background: var(--primary);
+    border: none;
+    color: var(--bg-dark);
+    padding: 16px;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-bottom: 20px;
+}
+
+.auth-btn:hover {
+    background: var(--accent);
+    box-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+    transform: translateY(-2px);
+}
+
+/* 表单切换 */
+.form-switch {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.form-switch a {
+    color: var(--primary);
+    text-decoration: none;
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.form-switch a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+/* 登录装饰 */
+.login-decoration {
+    flex: 1;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.05), rgba(139, 92, 246, 0.05));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px;
+    position: relative;
+    overflow: hidden;
+}
+
+.decoration-content {
+    text-align: center;
+    z-index: 1;
+}
+
+.decoration-content h3 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 24px;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+}
+
+.decoration-content h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 120px;
+    font-weight: 700;
+    color: var(--primary);
+    text-shadow: var(--neon-shadow);
+    margin-bottom: 20px;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+}
+
+.decoration-content p {
+    font-size: 18px;
+    color: var(--text-muted);
+    margin-bottom: 60px;
+    letter-spacing: 2px;
+}
+
+/* 特性列表 */
+.features {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.feature {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px 25px;
+    background: rgba(24, 24, 27, 0.6);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    transition: all 0.3s;
+}
+
+.feature:hover {
+    border-color: var(--primary);
+    transform: translateX(10px);
+    box-shadow: var(--neon-shadow);
+}
+
+.feature i {
+    color: var(--primary);
+    font-size: 20px;
+}
+
+.feature span {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+}
+
+/* 响应式设计 */
+@media (max-width: 1024px) {
+    .login-decoration {
+        display: none;
+    }
+    
+    .login-panel {
+        width: 100%;
+        border-right: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .login-panel {
+        padding: 40px 30px;
+    }
+    
+    .brand {
+        font-size: 32px;
+        margin-bottom: 40px;
+    }
+    
+    .auth-form h2 {
+        font-size: 24px;
+        margin-bottom: 30px;
+    }
+    
+    .form-group input {
+        padding: 12px 14px 12px 40px;
+        font-size: 13px;
+    }
+    
+    .form-group i {
+        top: 40px;
+        font-size: 14px;
+    }
+    
+    .toggle-password {
+        top: 40px;
+        font-size: 14px;
+    }
+    
+    .auth-btn {
+        padding: 14px;
+        font-size: 16px;
+    }
+}
+
+/* 加载动画 */
+.loading {
+    opacity: 0.7;
+    cursor: not-allowed;
+    position: relative;
+}
+
+.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid transparent;
+    border-top: 2px solid var(--bg-dark);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* 错误提示 */
+.error-message {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-size: 12px;
+    animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* 成功提示 */
+.success-message {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    color: #10b981;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    border-radius: 4px;
+    font-size: 12px;
+    animation: slideIn 0.5s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}

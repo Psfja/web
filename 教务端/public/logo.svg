@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 80" width="300" height="80">
+    <defs>
+        <linearGradient id="universityGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#4F46E5;stop-opacity:1" />
+            <stop offset="50%" style="stop-color:#7C3AED;stop-opacity:1" />
+            <stop offset="100%" style="stop-color:#EC4899;stop-opacity:1" />
+        </linearGradient>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="2" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+        </filter>
+    </defs>
+    
+    <style>
+        .university-text {
+            font-family: 'Arial', sans-serif;
+            font-weight: bold;
+            font-size: 48px;
+            fill: url(#universityGradient);
+            filter: url(#glow);
+        }
+    </style>
+    
+    <rect x="0" y="0" width="300" height="80" fill="transparent"/>
+    
+    <text class="university-text" x="10" y="60">加立敦大学</text>
+</svg>

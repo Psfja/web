@@ -1,0 +1,655 @@
+这是一个极具挑战也很有趣的需求。为了区分“教务管理端”和“学生端”，同时保持数据互通，我们将采用完全不同的设计语言。
+
+**教务端**是典型的 B 端 SaaS 风格（干净、明亮、高效）；
+**学生端**我们将设计为 **“Cyberpunk / Future Tech” (赛博朋克/未来科技)** 风格（暗黑模式、霓虹光效、玻璃拟态），给学生一种操作飞船控制台的感觉。
+
+### 系统架构更新
+
+我们不需要重新建数据库，因为数据是共享的。但是我们需要：
+1.  **后端**：在 `server.js` 中增加学生专属的 API（选课、退课、查看课表）。
+2.  **前端**：新建 `student.html`, `student-style.css`, `student-script.js`。
+
+---
+
+### 第 1 步：完善数据库 (确保关联表存在)
+
+请确保你已经运行了上一次的 SQL。如果尚未运行，请进入 MySQL 运行以下补充 SQL，重点是确保 `enrollments` 表存在，这是连接学生和课程的核心：
+
+```sql
+USE university_system;
+
+-- 确保选课表存在，用于存储哪个学生选了哪门课
+CREATE TABLE IF NOT EXISTS enrollments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT,
+    student_id INT,
+    grade VARCHAR(5) DEFAULT 'N/A',
+    enroll_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_enrollment (course_id, student_id) -- 防止重复选课
+);
+
+-- 确保有一个测试学生账号用于模拟登录
+INSERT IGNORE INTO students (student_id, name, major, email, status) 
+VALUES ('S2023001', '张伟', '计算机科学', 'zhangwei@edu.com', 'active');
+```
+
+---
+
+### 第 2 步：升级后端 `server.js`
+
+在原有的 `server.js` 底部（启动监听之前），添加以下 **学生端专属 API**：
+
+```javascript
+// ... (保留之前的代码) ...
+
+// ================= 学生端专属 API =================
+
+// 1. 获取某个学生已选的课程 (我的课表)
+// 我们这里模拟当前登录学生为 S2023001 (id: 1)
+app.get('/api/student/my-courses', (req, res) => {
+    const studentId = 1; // 模拟 ID，实际项目中应从 Token 获取
+    const sql = `
+        SELECT c.*, e.id as enrollment_id, e.grade 
+        FROM courses c
+        JOIN enrollments e ON c.id = e.course_id
+        WHERE e.student_id = ?
+    `;
+    db.query(sql, [studentId], (err, results) => {
+        if (err) return res.status(500).json(err);
+        res.json(results);
+    });
+});
+
+// 2. 获取所有可选课程 (排除已选的)
+app.get('/api/student/available-courses', (req, res) => {
+    const studentId = 1;
+    const sql = `
+        SELECT * FROM courses 
+        WHERE id NOT IN (SELECT course_id FROM enrollments WHERE student_id = ?)
+        AND status = 'active'
+    `;
+    db.query(sql, [studentId], (err, results) => {
+        if (err) return res.status(500).json(err);
+        res.json(results);
+    });
+});
+
+// 3. 学生选课 (Insert)
+app.post('/api/student/enroll', (req, res) => {
+    const studentId = 1;
+    const { courseId } = req.body;
+    
+    // 事务处理：先检查容量，再插入 (这里简化处理直接插入)
+    const sql = 'INSERT INTO enrollments (course_id, student_id) VALUES (?, ?)';
+    db.query(sql, [courseId, studentId], (err) => {
+        if (err) {
+            // 如果是重复选课
+            if(err.code === 'ER_DUP_ENTRY') return res.status(400).json({message: '你已经选过这门课了'});
+            return res.status(500).json(err);
+        }
+        
+        // 同时更新课程表的已选人数 +1
+        db.query('UPDATE courses SET enrolled = enrolled + 1 WHERE id = ?', [courseId]);
+        res.json({ message: '选课成功' });
+    });
+});
+
+// 4. 学生退课 (Delete)
+app.delete('/api/student/drop/:courseId', (req, res) => {
+    const studentId = 1;
+    const courseId = req.params.courseId;
+    
+    const sql = 'DELETE FROM enrollments WHERE course_id = ? AND student_id = ?';
+    db.query(sql, [courseId, studentId], (err, result) => {
+        if (err) return res.status(500).json(err);
+        
+        // 更新课程表已选人数 -1
+        db.query('UPDATE courses SET enrolled = enrolled - 1 WHERE id = ?', [courseId]);
+        res.json({ message: '退课成功' });
+    });
+});
+
+// 5. 获取学生个人信息
+app.get('/api/student/profile', (req, res) => {
+    const studentId = 1; 
+    db.query('SELECT * FROM students WHERE id = ?', [studentId], (err, result) => {
+        if(err) return res.status(500).json(err);
+        res.json(result[0]);
+    });
+});
+
+// ... (app.listen 部分) ...
+```
+
+---
+
+### 第 3 步：学生端 UI (HTML)
+
+我们将创建一个全新的入口文件 `student.html`。
+
+**文件名：`public/student.html`**
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEXUS | 学生终端</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="student-style.css">
+</head>
+<body>
+    <!-- 背景光效 -->
+    <div class="ambient-light"></div>
+    <div class="scan-line"></div>
+
+    <div class="layout">
+        <!-- 科技感侧边栏 -->
+        <aside class="cyber-sidebar">
+            <div class="brand">
+                <i class="ri-code-s-slash-line"></i>
+                <span>NEXUS</span>
+            </div>
+            
+            <div class="user-status">
+                <img src="https://ui-avatars.com/api/?name=Z&background=0ea5e9&color=fff" alt="Avatar">
+                <div class="status-text">
+                    <h3 id="nav-name">LOADING...</h3>
+                    <p class="status-indicator"><span class="blink"></span> ONLINE</p>
+                </div>
+            </div>
+
+            <nav>
+                <button class="nav-btn active" onclick="switchTab('dashboard')">
+                    <i class="ri-dashboard-3-line"></i> 概览控制台
+                </button>
+                <button class="nav-btn" onclick="switchTab('enroll')">
+                    <i class="ri-add-circle-line"></i> 选课中心
+                </button>
+                <button class="nav-btn" onclick="switchTab('schedule')">
+                    <i class="ri-calendar-event-line"></i> 课程日程
+                </button>
+                <button class="nav-btn" onclick="switchTab('profile')">
+                    <i class="ri-user-settings-line"></i> 学籍档案
+                </button>
+            </nav>
+
+            <div class="system-info">
+                <p>SYS.VER: 4.2.0</p>
+                <p>PING: 12ms</p>
+            </div>
+        </aside>
+
+        <!-- 主界面 -->
+        <main class="cyber-main">
+            <!-- 1. 仪表盘 -->
+            <section id="tab-dashboard" class="tab-content active">
+                <header class="cyber-header">
+                    <h1>DASHBOARD // <span class="sub-text">实时概览</span></h1>
+                    <div class="time-display" id="clock">00:00:00</div>
+                </header>
+
+                <div class="stats-row">
+                    <div class="cyber-card stat">
+                        <div class="stat-icon"><i class="ri-book-mark-line"></i></div>
+                        <div class="stat-data">
+                            <h3>已选课程</h3>
+                            <span class="glitch-text" id="stat-count">0</span>
+                        </div>
+                    </div>
+                    <div class="cyber-card stat">
+                        <div class="stat-icon"><i class="ri-medal-line"></i></div>
+                        <div class="stat-data">
+                            <h3>平均绩点</h3>
+                            <span>3.85</span>
+                        </div>
+                    </div>
+                    <div class="cyber-card stat">
+                        <div class="stat-icon"><i class="ri-timer-flash-line"></i></div>
+                        <div class="stat-data">
+                            <h3>本周课时</h3>
+                            <span>12h</span>
+                        </div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">我的课程列表 // ACTIVE_COURSES</h2>
+                <div class="course-grid" id="my-course-grid">
+                    <!-- JS 渲染 -->
+                </div>
+            </section>
+
+            <!-- 2. 选课中心 -->
+            <section id="tab-enroll" class="tab-content" style="display:none;">
+                <header class="cyber-header">
+                    <h1>MARKETPLACE // <span class="sub-text">全校选课</span></h1>
+                </header>
+                <div class="filter-bar">
+                    <input type="text" placeholder="检索课程代码/名称..." class="cyber-input">
+                    <button class="cyber-btn">SEARCH</button>
+                </div>
+                <div class="list-container">
+                    <table class="cyber-table">
+                        <thead>
+                            <tr>
+                                <th>CODE</th>
+                                <th>COURSE NAME</th>
+                                <th>INSTRUCTOR</th>
+                                <th>CREDITS</th>
+                                <th>CAPACITY</th>
+                                <th>ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="available-course-tbody">
+                            <!-- JS 渲染 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 3. 日程表 -->
+            <section id="tab-schedule" class="tab-content" style="display:none;">
+                <header class="cyber-header">
+                    <h1>SCHEDULE // <span class="sub-text">时间轴</span></h1>
+                </header>
+                <div class="cyber-card" style="min-height: 400px; display:flex; align-items:center; justify-content:center; color:#64748b;">
+                    <p>// 正在连接时空校准模块...</p>
+                    <p style="margin-left:10px; font-size:12px;">(此处可扩展为真实日历组件)</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="student-script.js"></script>
+</body>
+</html>
+```
+
+---
+
+### 第 4 步：学生端样式 CSS (高级科技感)
+
+这是实现“高级感”的关键。我们将使用：
+*   **颜色**：深蓝黑底色 (`#0f172a`) + 电光蓝 (`#0ea5e9`) + 霓虹紫 (`#8b5cf6`)。
+*   **字体**：`Rajdhani` (科幻标题) 和 `JetBrains Mono` (代码风格)。
+*   **特效**：玻璃拟态 (Glassmorphism)、发光边框 (Glow borders)、Glitch 故障效果。
+
+**文件名：`public/student-style.css`**
+
+```css
+:root {
+    --bg-dark: #09090b;
+    --bg-card: rgba(24, 24, 27, 0.6);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --primary: #0ea5e9; /* 电光蓝 */
+    --accent: #8b5cf6;  /* 赛博紫 */
+    --text-main: #e2e8f0;
+    --text-muted: #94a3b8;
+    --neon-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    background-color: var(--bg-dark);
+    color: var(--text-main);
+    font-family: 'JetBrains Mono', monospace; /* 科技代码感 */
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 背景特效 */
+.ambient-light {
+    position: absolute;
+    top: -50%; left: -50%;
+    width: 200%; height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.05), transparent 40%);
+    pointer-events: none;
+    z-index: -1;
+}
+
+.layout { display: flex; height: 100%; }
+
+/* --- 侧边栏 --- */
+.cyber-sidebar {
+    width: 280px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(20px);
+    border-right: 1px solid var(--border-color);
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+}
+
+.brand {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary);
+    text-shadow: var(--neon-shadow);
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-status {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.user-status img {
+    width: 48px; height: 48px; border-radius: 8px;
+    border: 2px solid var(--primary);
+    box-shadow: var(--neon-shadow);
+}
+
+.status-text h3 { font-size: 14px; color: white; margin-bottom: 4px; }
+.status-indicator { font-size: 10px; color: var(--primary); display: flex; align-items: center; gap: 6px; }
+.blink { width: 6px; height: 6px; background: var(--primary); border-radius: 50%; animation: pulse 2s infinite; }
+
+@keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+.nav-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--text-muted);
+    padding: 16px;
+    text-align: left;
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.nav-btn:hover, .nav-btn.active {
+    background: rgba(14, 165, 233, 0.1);
+    border-color: var(--primary);
+    color: var(--primary);
+    box-shadow: inset 2px 0 0 var(--primary);
+}
+
+.system-info { margin-top: auto; font-size: 10px; color: #475569; }
+
+/* --- 主内容 --- */
+.cyber-main { flex: 1; padding: 40px; overflow-y: auto; }
+
+.cyber-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+}
+
+.cyber-header h1 {
+    font-family: 'Rajdhani', sans-serif;
+    font-size: 36px;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.sub-text { color: var(--text-muted); font-size: 18px; font-weight: 400; }
+.time-display { font-size: 24px; color: var(--primary); font-family: 'JetBrains Mono', monospace; }
+
+/* 统计卡片 */
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 40px; }
+
+.cyber-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s;
+}
+
+.cyber-card::before {
+    content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+    background: var(--primary);
+}
+
+.cyber-card:hover { transform: translateY(-5px); border-color: var(--primary); box-shadow: var(--neon-shadow); }
+
+.stat { display: flex; align-items: center; gap: 20px; }
+.stat-icon { font-size: 32px; color: var(--primary); }
+.stat-data h3 { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+.stat-data span { font-size: 28px; font-weight: 700; font-family: 'Rajdhani'; }
+
+/* 课程网格 */
+.course-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+.course-card {
+    background: linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+    border: 1px solid var(--border-color);
+    padding: 20px;
+}
+
+.course-header { display: flex; justify-content: space-between; margin-bottom: 15px; }
+.code-badge { background: rgba(14,165,233,0.2); color: var(--primary); padding: 4px 8px; font-size: 12px; border: 1px solid var(--primary); }
+.course-card h3 { font-size: 18px; margin-bottom: 8px; }
+.course-detail { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; display: flex; gap: 15px; }
+.action-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid #ef4444;
+    color: #ef4444;
+    padding: 8px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono';
+    transition: 0.3s;
+}
+.action-btn:hover { background: #ef4444; color: white; }
+
+/* 表格 */
+.cyber-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+.cyber-table th { text-align: left; padding: 15px; border-bottom: 2px solid var(--border-color); color: var(--primary); font-size: 12px; letter-spacing: 1px; }
+.cyber-table td { padding: 15px; border-bottom: 1px solid var(--border-color); color: var(--text-muted); font-size: 14px; }
+.cyber-table tr:hover td { background: rgba(255,255,255,0.02); color: white; }
+
+.enroll-btn {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid #10b981;
+    color: #10b981;
+    padding: 6px 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.enroll-btn:hover { background: #10b981; color: black; box-shadow: 0 0 10px rgba(16,185,129,0.4); }
+
+/* 搜索框 */
+.filter-bar { display: flex; gap: 10px; }
+.cyber-input { background: transparent; border: 1px solid var(--border-color); padding: 10px; color: white; flex: 1; font-family: 'JetBrains Mono'; }
+.cyber-input:focus { border-color: var(--primary); outline: none; }
+.cyber-btn { background: var(--primary); border: none; padding: 0 20px; cursor: pointer; font-weight: bold; }
+```
+
+---
+
+### 第 5 步：学生端逻辑 JS (CRUD 交互)
+
+处理数据加载、选课（增）、退课（删）。
+
+**文件名：`public/student-script.js`**
+
+```javascript
+document.addEventListener('DOMContentLoaded', () => {
+    updateClock();
+    setInterval(updateClock, 1000);
+    
+    // 初始化数据
+    fetchProfile();
+    fetchMyCourses();
+});
+
+// 1. 获取个人信息
+async function fetchProfile() {
+    try {
+        const res = await fetch('/api/student/profile');
+        const data = await res.json();
+        document.getElementById('nav-name').innerText = data.name.toUpperCase();
+    } catch (e) {
+        console.error("加载用户信息失败", e);
+    }
+}
+
+// 2. 获取我的课程 (Read)
+async function fetchMyCourses() {
+    const res = await fetch('/api/student/my-courses');
+    const courses = await res.json();
+    
+    document.getElementById('stat-count').innerText = courses.length;
+    
+    const grid = document.getElementById('my-course-grid');
+    grid.innerHTML = '';
+    
+    if(courses.length === 0) {
+        grid.innerHTML = '<div style="color:#64748b; padding:20px;">// 暂无课程数据。请前往选课中心。</div>';
+        return;
+    }
+
+    courses.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'cyber-card course-card';
+        div.innerHTML = `
+            <div class="course-header">
+                <span class="code-badge">${c.course_code}</span>
+                <span style="color:${c.status === 'active' ? '#10b981' : '#ef4444'}">● ${c.status.toUpperCase()}</span>
+            </div>
+            <h3>${c.course_name}</h3>
+            <div class="course-detail">
+                <span><i class="ri-user-line"></i> ${c.teacher}</span>
+                <span><i class="ri-map-pin-line"></i> ${c.location || 'N/A'}</span>
+            </div>
+            <div class="course-detail">
+                <span><i class="ri-time-line"></i> ${c.schedule_time || 'TBD'}</span>
+                <span>CREDITS: ${c.credits}</span>
+            </div>
+            <button class="action-btn" onclick="dropCourse(${c.id})">DROP COURSE // 退课</button>
+        `;
+        grid.appendChild(div);
+    });
+}
+
+// 3. 获取可选课程列表 (Read for Selection)
+async function fetchAvailableCourses() {
+    const res = await fetch('/api/student/available-courses');
+    const courses = await res.json();
+    
+    const tbody = document.getElementById('available-course-tbody');
+    tbody.innerHTML = '';
+
+    courses.forEach(c => {
+        const tr = document.createElement('tr');
+        // 计算容量显示
+        const isFull = c.enrolled >= c.capacity;
+        
+        tr.innerHTML = `
+            <td><span style="color:var(--primary)">${c.course_code}</span></td>
+            <td>${c.course_name}</td>
+            <td>${c.teacher}</td>
+            <td>${c.credits}</td>
+            <td>${c.enrolled} / ${c.capacity}</td>
+            <td>
+                ${isFull 
+                    ? '<span style="color:#ef4444">FULL</span>' 
+                    : `<button class="enroll-btn" onclick="enrollCourse(${c.id})">ENROLL</button>`
+                }
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// 4. 选课操作 (Insert)
+async function enrollCourse(courseId) {
+    const res = await fetch('/api/student/enroll', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId })
+    });
+    
+    const result = await res.json();
+    if(res.ok) {
+        alert("ACCESS GRANTED: 选课成功");
+        fetchAvailableCourses(); // 刷新选课列表
+        fetchMyCourses();        // 刷新我的课程
+    } else {
+        alert("ERROR: " + result.message);
+    }
+}
+
+// 5. 退课操作 (Delete)
+async function dropCourse(courseId) {
+    if(!confirm("WARNING: 确定要从该课程中注销吗？这可能会影响你的学分。")) return;
+
+    const res = await fetch(`/api/student/drop/${courseId}`, {
+        method: 'DELETE'
+    });
+    
+    if(res.ok) {
+        fetchMyCourses(); // 刷新我的课程
+    } else {
+        alert("操作失败");
+    }
+}
+
+// 工具：Tab 切换
+function switchTab(tabId) {
+    // 隐藏所有 Tab
+    document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    // 移除导航激活状态
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+    
+    // 显示目标
+    document.getElementById(`tab-${tabId}`).style.display = 'block';
+    // 激活当前按钮 (通过遍历查找，简化处理)
+    const btnMap = {'dashboard':0, 'enroll':1, 'schedule':2, 'profile':3};
+    document.querySelectorAll('.nav-btn')[btnMap[tabId]].classList.add('active');
+
+    // 如果切到选课中心，加载数据
+    if(tabId === 'enroll') fetchAvailableCourses();
+}
+
+// 工具：时钟
+function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').innerText = now.toLocaleTimeString('en-GB');
+}
+```
+
+---
+
+### 如何体验两个系统？
+
+1.  **运行后端**：保存所有文件，重启 `node server.js`。
+2.  **访问教务端 (B端)**：浏览器打开 `http://localhost:3000/index.html` (或直接 `/`)。
+    *   在这里你可以添加课程。
+3.  **访问学生端 (C端)**：浏览器打开 `http://localhost:3000/student.html`。
+    *   你会看到刚才在教务端添加的课程。
+    *   在学生端点击 "ENROLL" (选课)。
+    *   回到教务端刷新，你会发现该课程的 "Enrolled" 人数增加了，数据是完全同步的！
+
+### 亮点总结
+
+1.  **数据互通**：教务端发布的课程，学生端立马能选；学生选了课，教务端人数立马变动。
+2.  **视觉反差**：
+    *   教务端：白色清爽，注重管理效率。
+    *   学生端：黑客帝国/赛博朋克风，代码字体，霓虹光效，沉浸感极强。
+3.  **完整流程**：实现了选课（Insert到关联表）、退课（Delete关联表）、查看（Select关联查询）。

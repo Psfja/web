@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlavorDash | 高端外卖</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边导航 -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon"><i class="ri-fire-fill"></i></div>
+                <h1>FlavorDash</h1>
+            </div>
+            <nav>
+                <button class="nav-item active" onclick="switchTab('menu')"><i class="ri-restaurant-2-line"></i> 点餐</button>
+                <button class="nav-item" onclick="switchTab('orders')"><i class="ri-file-list-3-line"></i> 订单</button>
+                <button class="nav-item" onclick="switchTab('profile')" id="nav-profile" style="display:none;"><i class="ri-user-line"></i> 个人中心</button>
+            </nav>
+            <!-- 用户信息展示 -->
+            <div class="user-info-section" id="userInfoSection" style="display:none; margin-top:auto; padding:15px; background:#f8f9fa; border-radius:12px;">
+                <img src="" alt="用户头像" id="userAvatar" style="width:50px; height:50px; border-radius:50%; object-fit:cover; display:block; margin:0 auto 10px;">
+                <p style="text-align:center; font-weight:600; margin-bottom:5px;" id="userNickname">用户昵称</p>
+                <button onclick="logout()" style="width:100%; padding:8px; border:none; background:#ff6b6b; color:white; border-radius:6px; cursor:pointer;">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主区域 -->
+        <main class="main-area">
+            
+            <!-- 1. 点餐视图 -->
+            <section id="view-menu" class="view-section active">
+                <header class="top-bar">
+                    <div class="welcome-text">
+                        <h2>Hungry?</h2>
+                        <p>探索今日精选美食</p>
+                    </div>
+                    <div class="search-box">
+                        <i class="ri-search-line"></i>
+                        <input type="text" placeholder="搜索想吃的...">
+                    </div>
+                </header>
+                
+                <!-- 1. 新增：分类筛选胶囊 -->
+                <div class="category-filter" id="category-filter">
+                    <button class="cat-pill active" onclick="filterMenu('all', this)">全部</button>
+                    <button class="cat-pill" onclick="filterMenu('主食', this)">🍔 主食</button>
+                    <button class="cat-pill" onclick="filterMenu('轻食', this)">🥗 轻食</button>
+                    <button class="cat-pill" onclick="filterMenu('汤品', this)">🍲 汤品</button>
+                    <button class="cat-pill" onclick="filterMenu('小吃', this)">🍟 小吃</button>
+                </div>
+                
+                <div class="menu-layout">
+                    <!-- 菜品网格 -->
+                    <div class="food-grid" id="food-list">
+                        <!-- JS 渲染 -->
+                    </div>
+                    
+                    <!-- 悬浮购物车面板 -->
+                    <div class="cart-panel" id="draggable-cart">
+                        <!-- 头部：拖拽区域 -->
+                        <div class="cart-header" id="cart-header">
+                            <h3><i class="ri-drag-move-2-fill drag-handle-icon"></i> 我的订单</h3>
+                            <span class="clear-cart" onclick="clearCart()">清空</span>
+                        </div>
+                        
+                        <div class="cart-items" id="cart-items-container">
+                            <div class="empty-cart-tip">
+                                <i class="ri-shopping-basket-2-line" style="font-size:40px; color:#ddd"></i>
+                                <p>购物车空空如也</p>
+                            </div>
+                        </div>
+                        
+                        <div class="cart-footer">
+                            <div class="total-row">
+                                <span>合计</span>
+                                <span class="total-price">¥ <span id="cart-total">0.00</span></span>
+                            </div>
+                            <button class="checkout-btn" onclick="submitOrder()">立即支付</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. 新增：结账地址模态框 -->
+            <div id="checkoutModal" class="modal-overlay">
+                <div class="modal-card">
+                    <div class="modal-header">
+                        <h3>配送信息</h3>
+                        <span class="close-modal" onclick="closeCheckout()">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="checkout-summary">
+                            <p>共 <span id="modal-count">0</span> 件商品</p>
+                            <p class="modal-total">¥ <span id="modal-total-price">0.00</span></p>
+                        </div>
+                        <div class="form-group">
+                            <label>收货人姓名</label>
+                            <input type="text" placeholder="例如：张先生">
+                        </div>
+                        <div class="form-group">
+                            <label>联系电话</label>
+                            <input type="text" placeholder="138xxxx..." maxlength="11">
+                        </div>
+                        <div class="form-group">
+                            <label>详细地址</label>
+                            <textarea id="delivery-address" placeholder="街道、门牌号等..." rows="3"></textarea>
+                        </div>
+                    </div>
+                    <button class="confirm-pay-btn" onclick="confirmPayment()">确认支付</button>
+                </div>
+            </div>
+            
+            <!-- 新增：扫码支付模态框 -->
+            <div id="qrModal" class="modal-overlay" style="z-index: 1001;">
+                <div class="modal-card qr-card">
+                    <div class="qr-header">
+                        <i class="ri-wechat-pay-fill"></i> 微信支付
+                        <span class="close-modal" style="color:white; opacity:0.8;" onclick="closeQr()">&times;</span>
+                    </div>
+                    <div class="qr-body">
+                        <p class="qr-tip">亿万用户的选择，更快更安全</p>
+                        <!-- 这里引用刚才保存的图片 -->
+                        <img src="qrcode.jpg" alt="微信支付" class="qr-image">
+                        <div class="qr-price">支付金额: <span id="qr-total-amount">¥0.00</span></div>
+                        
+                        <button class="btn-paid" onclick="finishOrder()">
+                            <i class="ri-check-line"></i> 我已完成支付
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. 订单记录视图 -->
+            <section id="view-orders" class="view-section" style="display:none;">
+                <header><h2>历史订单</h2></header>
+                <div class="order-history-list" id="order-history"></div>
+            </section>
+
+            <!-- 新增：个人中心视图 -->
+            <section id="view-profile" class="view-section" style="display:none;">
+                <header><h2>个人中心</h2></header>
+                <div class="profile-card">
+                    <div class="profile-header">
+                        <img src="" alt="用户头像" id="profileAvatar" style="width:80px; height:80px; border-radius:50%; object-fit:cover;">
+                        <h3 id="profileNickname">用户昵称</h3>
+                        <p id="profileUsername" style="color:#666; font-size:14px;">用户名</p>
+                    </div>
+                    <div class="profile-info">
+                        <div class="profile-item">
+                            <label>昵称</label>
+                            <input type="text" id="profileNicknameInput" placeholder="设置您的昵称">
+                        </div>
+                        <div class="profile-item">
+                            <label>手机号</label>
+                            <input type="text" id="profilePhone" placeholder="请输入手机号">
+                        </div>
+                        <button onclick="updateProfile()" class="btn-update-profile">保存信息</button>
+                    </div>
+                </div>
+            </section>
+
+
+
+
+
+        </main>
+    </div>
+
+    <!-- DS 客服悬浮组件 -->
+    <div class="ds-widget">
+        <!-- 聊天窗口 (默认隐藏) -->
+        <div class="ds-chat-window" id="ds-window">
+            <div class="ds-header">
+                <div class="ds-header-info">
+                    <img src="https://api.dicebear.com/7.x/bottts/svg?seed=DS" alt="Bot">
+                    <div>
+                        <h4>DS 智能客服</h4>
+                        <span>在线 • 秒回</span>
+                    </div>
+                </div>
+                <button class="ds-close-btn" onclick="toggleChat()"><i class="ri-close-line"></i></button>
+            </div>
+            
+            <div class="ds-messages" id="ds-messages">
+                <div class="ds-msg bot">
+                    <p>👋 您好！我是 FlavorDash 的智能助手，有什么可以帮您？</p>
+                </div>
+            </div>
+            
+            <div class="ds-input-area">
+                <input type="text" id="ds-input" placeholder="输入您的问题...">
+                <button onclick="sendDsMessage()"><i class="ri-send-plane-fill"></i></button>
+            </div>
+        </div>
+
+        <!-- 悬浮按钮 -->
+        <button class="ds-float-btn" onclick="toggleChat()">
+            <i class="ri-customer-service-2-fill"></i>
+        </button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

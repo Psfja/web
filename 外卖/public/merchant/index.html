@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlavorDash | 商家管理</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边导航 -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="logo-icon"><i class="ri-fire-fill"></i></div>
+                <h1>FlavorDash</h1>
+            </div>
+            <nav>
+                <button class="nav-item active" onclick="switchTab('dashboard')"><i class="ri-dashboard-line"></i> 仪表盘</button>
+                <button class="nav-item" onclick="switchTab('foods')"><i class="ri-restaurant-2-line"></i> 菜品管理</button>
+                <button class="nav-item" onclick="switchTab('categories')"><i class="ri-list-check"></i> 分类管理</button>
+                <button class="nav-item" onclick="switchTab('orders')"><i class="ri-file-list-3-line"></i> 订单管理</button>
+            </nav>
+            <!-- 商家信息展示 -->
+            <div class="user-info-section" id="userInfoSection" style="margin-top:auto; padding:15px; background:#f8f9fa; border-radius:12px;">
+                <div class="logo-icon" style="width:50px; height:50px; border-radius:50%; background:#ff6b6b; color:white; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; font-size:24px;"><i class="ri-store-2-fill"></i></div>
+                <p style="text-align:center; font-weight:600; margin-bottom:5px;">商家管理</p>
+                <button onclick="logout()" style="width:100%; padding:8px; border:none; background:#ff6b6b; color:white; border-radius:6px; cursor:pointer;">退出登录</button>
+            </div>
+        </aside>
+
+        <!-- 主区域 -->
+        <main class="main-area">
+            
+            <!-- 1. 仪表盘视图 -->
+            <section id="view-dashboard" class="view-section active">
+                <header class="top-bar">
+                    <div class="welcome-text">
+                        <h2>商家仪表盘</h2>
+                        <p>实时监控店铺运营状况</p>
+                    </div>
+                </header>
+                
+                <div class="dashboard-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="ri-food-apple-fill"></i></div>
+                        <div class="stat-content">
+                            <h3>总菜品</h3>
+                            <p id="stat-foods">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="ri-shopping-bag-fill"></i></div>
+                        <div class="stat-content">
+                            <h3>今日订单</h3>
+                            <p id="stat-orders-today">0</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="ri-money-dollar-circle-fill"></i></div>
+                        <div class="stat-content">
+                            <h3>今日营收</h3>
+                            <p id="stat-revenue-today">¥0.00</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon"><i class="ri-user-fill"></i></div>
+                        <div class="stat-content">
+                            <h3>总用户</h3>
+                            <p id="stat-users">0</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. 菜品管理视图 -->
+            <section id="view-foods" class="view-section" style="display:none;">
+                <header class="top-bar">
+                    <div class="welcome-text">
+                        <h2>菜品管理</h2>
+                        <p>添加、编辑和管理店铺菜品</p>
+                    </div>
+                </header>
+                
+                <div class="admin-panel">
+                    <div class="card add-food-form">
+                        <h3>上架新菜品</h3>
+                        <form onsubmit="addFood(event)">
+                            <input type="text" id="f_name" placeholder="菜品名称" required>
+                            <input type="number" id="f_price" placeholder="价格" required>
+                            <input type="text" id="f_cat" placeholder="分类 (如: 主食)">
+                            <input type="text" id="f_img" placeholder="图片URL">
+                            <textarea id="f_desc" placeholder="描述"></textarea>
+                            <button type="submit">上架</button>
+                        </form>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>菜品列表</h3>
+                        <div class="food-list" id="food-list"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. 分类管理视图 -->
+            <section id="view-categories" class="view-section" style="display:none;">
+                <header class="top-bar">
+                    <div class="welcome-text">
+                        <h2>分类管理</h2>
+                        <p>管理菜品分类</p>
+                    </div>
+                </header>
+                
+                <div class="card">
+                    <h3>添加分类</h3>
+                    <form onsubmit="addCategory(event)">
+                        <input type="text" id="category-name" placeholder="分类名称 (如: 主食)" required>
+                        <button type="submit">添加</button>
+                    </form>
+                </div>
+                
+                <div class="card">
+                    <h3>分类列表</h3>
+                    <div class="category-list" id="category-list"></div>
+                </div>
+            </section>
+
+            <!-- 4. 订单管理视图 -->
+            <section id="view-orders" class="view-section" style="display:none;">
+                <header class="top-bar">
+                    <div class="welcome-text">
+                        <h2>订单管理</h2>
+                        <p>查看和处理所有订单</p>
+                    </div>
+                </header>
+                
+                <div class="card">
+                    <h3>所有订单</h3>
+                    <div class="order-list" id="order-list"></div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

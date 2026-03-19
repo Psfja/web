@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>加立敦大学教务系统 | 学生终端</title>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* 引入全局样式 */
+        @import url('style.css');
+
+        .layout {
+            display: flex;
+            height: 100vh;
+        }
+        
+        .main-content {
+            flex: 1;
+            padding: 40px;
+            overflow-y: auto;
+        }
+        
+        /* 网格布局 */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+        
+        .cyber-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 20px;
+        }
+        
+        .cyber-header h1 {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 2rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .sub-text {
+            color: var(--text-muted);
+            font-size: 1rem;
+            font-weight: 400;
+        }
+        
+        .time-display {
+            font-size: 1.5rem;
+            color: var(--tech-primary);
+            font-family: 'JetBrains Mono', monospace;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 40px 0 20px 0;
+            color: var(--text-main);
+        }
+        
+        .cyber-tabs {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+        
+        .cyber-tab-btn {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono';
+            transition: all 0.3s;
+            white-space: nowrap;
+            border-radius: 8px;
+        }
+        
+        .cyber-tab-btn:hover, .cyber-tab-btn.active {
+            border-color: var(--tech-primary);
+            color: var(--tech-primary);
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.2);
+            background: rgba(14, 165, 233, 0.05);
+        }
+        
+        .cyber-file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .cyber-file-card {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--glass-border);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+            cursor: pointer;
+            display: block;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .cyber-file-card:hover {
+            border-color: var(--tech-secondary);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.2);
+            transform: translateY(-4px);
+        }
+        
+        .cyber-file-icon {
+            font-size: 32px;
+            color: var(--tech-secondary);
+            margin-bottom: 10px;
+        }
+        
+        .cyber-file-name {
+            color: var(--text-main);
+            font-size: 14px;
+            margin-bottom: 5px;
+            font-family: 'Rajdhani';
+            font-weight: 600;
+        }
+        
+        .cyber-file-meta {
+            font-size: 10px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .filter-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+        
+        .cyber-input {
+            background: rgba(255,255,255,0.8);
+            border: 1px solid var(--glass-border);
+            padding: 10px;
+            color: var(--text-main);
+            flex: 1;
+            font-family: 'JetBrains Mono';
+            border-radius: 8px;
+        }
+
+        .cyber-input:focus {
+            border-color: var(--tech-primary);
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.2);
+            background: rgba(255,255,255,1);
+            outline: none;
+        }
+        
+        .cyber-btn {
+            background: linear-gradient(135deg, var(--tech-primary), var(--tech-secondary));
+            border: none;
+            padding: 0 20px;
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+            border-radius: 8px;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);
+        }
+        
+        .cyber-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(14, 165, 233, 0.4);
+        }
+        
+        .cyber-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .cyber-table th {
+            text-align: left;
+            padding: 15px;
+            border-bottom: 2px solid var(--glass-border);
+            color: var(--tech-primary);
+            font-size: 14px;
+            letter-spacing: 1px;
+        }
+        
+        .cyber-table td {
+            padding: 15px;
+            border-bottom: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        
+        .cyber-table tr:hover td {
+            background: rgba(0,0,0,0.02);
+            color: var(--text-main);
+        }
+        
+        .enroll-btn {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid #10b981;
+            color: #10b981;
+            padding: 6px 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 6px;
+        }
+        
+        .enroll-btn:hover {
+            background: #10b981;
+            color: black;
+            box-shadow: 0 0 10px rgba(16,185,129,0.4);
+        }
+        
+        .calendar-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .calendar-btn {
+            background: transparent;
+            border: 1px solid var(--tech-primary);
+            color: var(--tech-primary);
+            padding: 8px 16px;
+            cursor: pointer;
+            font-family: 'Rajdhani', sans-serif;
+            font-weight: 600;
+            transition: all 0.3s;
+            border-radius: 4px;
+        }
+        
+        .calendar-btn:hover {
+            background: var(--tech-primary);
+            color: var(--bg-base);
+            box-shadow: 0 0 10px rgba(14, 165, 233, 0.3);
+        }
+        
+        .calendar-container {
+            margin-bottom: 30px;
+        }
+        
+        .calendar-weekdays {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .weekday {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+        }
+        
+        .calendar-day {
+            min-height: 80px;
+            padding: 10px;
+            border: 1px solid var(--glass-border);
+            background: rgba(255, 255, 255, 0.8);
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+        }
+        
+        .calendar-day:hover {
+            border-color: var(--tech-primary);
+            background: rgba(14, 165, 233, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .calendar-day.today {
+            border-color: var(--tech-secondary);
+            background: rgba(139, 92, 246, 0.1);
+            box-shadow: 0 0 15px rgba(139, 92, 246, 0.3);
+        }
+        
+        .calendar-day.other-month {
+            opacity: 0.3;
+            pointer-events: none;
+        }
+        
+        .day-number {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+        
+        .today .day-number {
+            color: var(--tech-secondary);
+        }
+        
+        .course-event {
+            font-size: 10px;
+            padding: 4px;
+            background: rgba(14, 165, 233, 0.2);
+            border-left: 2px solid var(--tech-primary);
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            border-radius: 2px;
+        }
+        
+        .course-event.secondary {
+            background: rgba(139, 92, 246, 0.2);
+            border-left-color: var(--tech-secondary);
+        }
+        
+        .today-courses {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--glass-border);
+        }
+        
+        .today-courses h3 {
+            color: var(--tech-primary);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+        
+        #todayCourseList {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .today-course-item {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--glass-border);
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s;
+            border-radius: 8px;
+        }
+        
+        .today-course-item:hover {
+            border-color: var(--tech-primary);
+            transform: translateX(5px);
+        }
+        
+        .course-info h4 {
+            font-size: 14px;
+            margin-bottom: 4px;
+            color: var(--text-main);
+        }
+        
+        .course-time-loc {
+            font-size: 10px;
+            color: var(--text-muted);
+            display: flex;
+            gap: 15px;
+        }
+        
+        .course-credits {
+            background: var(--tech-primary);
+            color: var(--bg-base);
+            padding: 4px 8px;
+            font-size: 10px;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+        
+        /* --- AI 助教终端样式 --- */
+        .cyber-chat-container {
+            height: 600px;
+            border: 1px solid var(--tech-primary);
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            border-radius: 16px;
+            position: relative;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.1), inset 0 1px 0 rgba(0,0,0,0.1);
+        }
+        
+        /* 装饰角标 */
+        .cyber-chat-container::before {
+            content: ''; position: absolute; top: -1px; left: -1px; width: 20px; height: 20px;
+            border-top: 2px solid var(--tech-primary); border-left: 2px solid var(--tech-primary);
+            border-radius: 16px 0 0 0;
+        }
+        
+        .cyber-chat-container::after {
+            content: ''; position: absolute; bottom: -1px; right: -1px; width: 20px; height: 20px;
+            border-bottom: 2px solid var(--tech-primary); border-right: 2px solid var(--tech-primary);
+            border-radius: 0 0 16px 0;
+        }
+        
+        .chat-viewport {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+        
+        .chat-msg {
+            display: flex;
+            gap: 15px;
+            max-width: 80%;
+        }
+        
+        .chat-msg.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+        
+        .chat-msg.ai {
+            margin-right: auto;
+        }
+        
+        .chat-msg .avatar {
+            width: 40px;
+            height: 40px;
+            border: 1px solid var(--glass-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-family: 'Rajdhani';
+            border-radius: 8px;
+        }
+        
+        .chat-msg.ai .avatar {
+            background: rgba(14, 165, 233, 0.2);
+            color: var(--tech-primary);
+            border-color: var(--tech-primary);
+        }
+        
+        .chat-msg.user .avatar {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--tech-secondary);
+            border-color: var(--tech-secondary);
+        }
+        
+        .chat-msg .bubble {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 12px 16px;
+            border: 1px solid var(--glass-border);
+            color: var(--text-main);
+            font-family: 'JetBrains Mono';
+            font-size: 14px;
+            line-height: 1.6;
+            position: relative;
+            border-radius: 12px;
+        }
+        
+        .chat-msg.ai .bubble {
+            border-left: 3px solid var(--tech-primary);
+            box-shadow: -5px 0 10px rgba(14, 165, 233, 0.1);
+        }
+        
+        .chat-msg.user .bubble {
+            border-right: 3px solid var(--tech-secondary);
+            box-shadow: 5px 0 10px rgba(139, 92, 246, 0.1);
+            text-align: right;
+        }
+        
+        .chat-input-area {
+            padding: 20px;
+            border-top: 1px solid var(--glass-border);
+            display: flex;
+            gap: 15px;
+            background: rgba(255, 255, 255, 0.8);
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--glass-border);
+            padding: 0 15px;
+            border-radius: 8px;
+        }
+        
+        .prompt-char {
+            color: var(--tech-primary);
+            margin-right: 10px;
+            font-weight: bold;
+            animation: blink 1s infinite;
+        }
+        
+        .input-wrapper input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            width: 100%;
+            height: 50px;
+            outline: none;
+            font-family: 'JetBrains Mono';
+        }
+        
+        .cyber-send-btn {
+            background: var(--tech-primary);
+            color: var(--bg-base);
+            border: none;
+            padding: 0 30px;
+            font-family: 'Rajdhani';
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.3);
+        }
+        
+        .cyber-send-btn:hover {
+            background: var(--tech-secondary);
+            box-shadow: 0 15px 30px rgba(139, 92, 246, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .cyber-send-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+        
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+        
+        .course-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        
+        .course-card {
+            background: linear-gradient(145deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.01) 100%);
+            border: 1px solid var(--glass-border);
+            padding: 20px;
+            border-radius: 12px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        
+        .course-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--tech-primary);
+            box-shadow: 0 10px 20px rgba(14, 165, 233, 0.2);
+        }
+        
+        .course-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .code-badge {
+            background: rgba(14,165,233,0.2);
+            color: var(--tech-primary);
+            padding: 4px 8px;
+            font-size: 12px;
+            border: 1px solid var(--tech-primary);
+            border-radius: 6px;
+        }
+        
+        .course-card h3 {
+            font-size: 18px;
+            margin-bottom: 8px;
+            color: var(--text-main);
+        }
+        
+        .course-detail {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+        }
+        
+        .action-btn {
+            width: 100%;
+            background: transparent;
+            border: 1px solid #ef4444;
+            color: #ef4444;
+            padding: 8px;
+            cursor: pointer;
+            font-family: 'JetBrains Mono';
+            transition: all 0.3s;
+            border-radius: 6px;
+        }
+        
+        .action-btn:hover {
+            background: #ef4444;
+            color: white;
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.3);
+        }
+        
+        .announcement-list {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .announcement-item {
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        
+        .announcement-item:hover {
+            transform: translateX(6px);
+            border-left: 3px solid var(--tech-primary);
+        }
+        
+        .announcement-title {
+            color: var(--tech-primary);
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .announcement-date {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .announcement-content {
+            color: var(--text-main);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .announcement-priority-high {
+            border-left: 4px solid #ef4444;
+        }
+        
+        .announcement-priority-normal {
+            border-left: 4px solid #10b981;
+        }
+        
+        .announcement-priority-medium {
+            border-left: 4px solid #f59e0b;
+        }
+    </style>
+</head>
+<body>
+    <!-- 背景流动的全局光标效果 -->
+    <div class="cursor-glow" id="cursor-glow"></div>
+
+    <div class="layout">
+        <!-- 悬浮侧边栏 -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="ri-blaze-line"></i>
+                <h3>加立敦大学</h3>
+            </div>
+            
+            <div class="user-profile">
+                <div class="avatar">ST</div>
+                <div class="user-info">
+                    <h4 id="nav-name">加载中...</h4>
+                    <p>学生</p>
+                </div>
+            </div>
+
+            <nav>
+                <ul>
+                    <li class="nav-item active" onclick="switchTab('dashboard')">
+                        <a href="#"><i class="ri-dashboard-line"></i> 概览控制台</a>
+                    </li>
+                    <li class="nav-item" onclick="switchTab('enroll')">
+                        <a href="#"><i class="ri-add-circle-line"></i> 选课中心</a>
+                    </li>
+                    <li class="nav-item" onclick="switchTab('schedule')">
+                        <a href="#"><i class="ri-calendar-event-line"></i> 课程日程</a>
+                    </li>
+                    <li class="nav-item" onclick="switchTab('resources')">
+                        <a href="#"><i class="ri-folder-download-line"></i> 学习资料库</a>
+                    </li>
+                    <li class="nav-item" onclick="switchTab('ai-assistant')">
+                        <a href="#"><i class="ri-robot-2-line"></i> AI 助教</a>
+                    </li>
+                    <li class="nav-item" onclick="logout()">
+                        <a href="#"><i class="ri-logout-box-line"></i> 退出登录</a>
+                    </li>
+                </ul>
+            </nav>
+
+            <div class="system-info">
+                <p>系统版本: 4.2.0</p>
+                <p>延迟: 12ms</p>
+            </div>
+        </aside>
+
+        <!-- 主界面 -->
+        <main class="main-content">
+            <!-- 1. 仪表盘 -->
+            <section id="tab-dashboard" class="tab-content active">
+                <header class="cyber-header">
+                    <h1>控制台 // <span class="sub-text">实时概览</span></h1>
+                    <div class="time-display" id="clock">00:00:00</div>
+                </header>
+
+                <div class="dashboard-grid">
+                    <div class="spotlight-card">
+                        <div style="color: var(--text-muted); margin-bottom: 10px;"><i class="ri-file-list-3-line"></i> 已选课程</div>
+                        <div class="data-number" id="stat-count">12</div>
+                        <div style="margin-top: 10px; font-size: 14px; color: #10b981;">+2 本周新增</div>
+                    </div>
+                    
+                    <div class="spotlight-card">
+                        <div style="color: var(--text-muted); margin-bottom: 10px;"><i class="ri-bar-chart-box-line"></i> 平均绩点 (GPA)</div>
+                        <div class="data-number">3.85</div>
+                        <div style="margin-top: 10px; font-size: 14px; color: var(--tech-primary);">年级排名前 5%</div>
+                    </div>
+
+                    <div class="spotlight-card">
+                        <div style="color: var(--text-muted); margin-bottom: 10px;"><i class="ri-time-line"></i> 本周学习课时</div>
+                        <div class="data-number">24<span style="font-size: 1rem; color: var(--text-muted);">h</span></div>
+                        <div style="margin-top: 10px; font-size: 14px; color: #94a3b8;">超越了 80% 的同学</div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">校园公告</h2>
+                <div class="announcement-list" id="announcement-list">
+                    <!-- JS 渲染公告 -->
+                </div>
+
+                <h2 class="section-title">我的课程列表</h2>
+                <div class="course-grid" id="my-course-grid">
+                    <!-- JS 渲染 -->
+                </div>
+            </section>
+
+            <!-- 2. 选课中心 -->
+            <section id="tab-enroll" class="tab-content" style="display:none;">
+                <header class="cyber-header">
+                    <h1>选课中心 // <span class="sub-text">全校选课</span></h1>
+                </header>
+                <div class="filter-bar">
+                    <input type="text" placeholder="检索课程代码/名称..." class="cyber-input">
+                    <button class="cyber-btn">搜索</button>
+                </div>
+                <div class="spotlight-card">
+                    <table class="cyber-table">
+                        <thead>
+                            <tr>
+                                <th>课程代码</th>
+                                <th>课程名称</th>
+                                <th>授课教师</th>
+                                <th>学分</th>
+                                <th>容量</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="available-course-tbody">
+                            <!-- JS 渲染 -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- 3. 日程表 -->
+            <section id="tab-schedule" class="tab-content" style="display:none;">
+                <header class="cyber-header">
+                    <h1>课程日程 // <span class="sub-text">时间轴</span></h1>
+                </header>
+                <div class="spotlight-card">
+                    <!-- 日历导航 -->
+                    <div class="calendar-nav">
+                        <button class="calendar-btn" id="prevMonth"><i class="ri-arrow-left-line"></i></button>
+                        <h2 id="currentMonth"></h2>
+                        <button class="calendar-btn" id="nextMonth"><i class="ri-arrow-right-line"></i></button>
+                        <button class="calendar-btn" id="todayBtn">今天</button>
+                    </div>
+                    
+                    <!-- 日历网格 -->
+                    <div class="calendar-container">
+                        <!-- 星期标题 -->
+                        <div class="calendar-weekdays">
+                            <div class="weekday">日</div>
+                            <div class="weekday">一</div>
+                            <div class="weekday">二</div>
+                            <div class="weekday">三</div>
+                            <div class="weekday">四</div>
+                            <div class="weekday">五</div>
+                            <div class="weekday">六</div>
+                        </div>
+                        <!-- 日期网格 -->
+                        <div class="calendar-days" id="calendarDays"></div>
+                    </div>
+                    
+                    <!-- 今日课程列表 -->
+                    <div class="today-courses">
+                        <h3>今日课程</h3>
+                        <div id="todayCourseList"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 4. 学习资料库 -->
+            <section id="tab-resources" class="tab-content" style="display:none;">
+                <header class="cyber-header">
+                    <h1>数据中心 // <span class="sub-text">资源下载</span></h1>
+                </header>
+                <div class="cyber-tabs" id="student-resource-tabs">
+                    <!-- 课程标签 JS生成 -->
+                </div>
+                <div class="cyber-file-grid" id="student-file-list">
+                    <!-- 文件卡片 -->
+                </div>
+            </section>
+
+            <!-- 6. AI 助教终端 -->
+            <section id="tab-ai-assistant" class="tab-content" style="display:none;">
+                <header class="cyber-header">
+                    <h1>NEXUS_AI // <span class="sub-text">智能交互终端</span></h1>
+                </header>
+                
+                <div class="cyber-chat-container">
+                    <div class="chat-viewport" id="chat-viewport">
+                        <div class="chat-msg ai">
+                            <div class="avatar">AI</div>
+                            <div class="bubble">NEXUS 系统已上线。正在等待指令...</div>
+                        </div>
+                        <!-- 消息会插入这里 -->
+                    </div>
+                    <div class="chat-input-area">
+                        <div class="input-wrapper">
+                            <span class="prompt-char">></span>
+                            <input type="text" id="ai-input" placeholder="输入指令或问题..." autocomplete="off">
+                        </div>
+                        <button class="cyber-send-btn" onclick="sendAiMessage()">EXECUTE</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="student-script.js"></script>
+</body>
+</html>
